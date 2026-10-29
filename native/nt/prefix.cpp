@@ -50,6 +50,22 @@ void NativePrefix::place_runtime_components(const std::filesystem::path &runtime
 			if (std::filesystem::is_regular_file(from, error))
 				std::filesystem::copy_file(from, windows / folder / name, std::filesystem::copy_options::update_existing, error);
 		}
+	// The libraries the runtime answers natively have a file here too, as every library Windows answers has one: a program that replaces one
+	// of them with a proxy of its own -- a mod loader's version.dll -- asks the system directory for the library it stands for and gives up
+	// when nothing is there. The loader answers a path in the system directory with the runtime's implementation, not with this image, so
+	// only the name of the file matters; a file that is already there, an installed runtime's for one, is left alone.
+	for (const auto &[source, folder] : {std::pair{runtime, "system32"}, std::pair{runtime / "x86", "syswow64"}}) {
+		const auto placeholder = source / "raven-placeholder.dll";
+		std::error_code error;
+		if (!std::filesystem::is_regular_file(placeholder, error))
+			continue;
+		for (const auto library : system_library_names()) {
+			const auto target = windows / folder / library;
+			if (std::filesystem::exists(target, error))
+				continue;
+			std::filesystem::copy_file(placeholder, target, std::filesystem::copy_options::none, error);
+		}
+	}
 }
 
 NativePrefix NativePrefix::from_environment()

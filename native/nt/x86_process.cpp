@@ -791,8 +791,13 @@ NativeResult run_native_process_x86(ModuleSet &modules, PEModule &entry,
 	NativePaths paths(prefix);
 	paths.set_wow64(true);
 	paths.set_package_roots([&registry] { return virtual_package_roots(registry); });
+	// A program starts in its own folder unless the process that started it chose another, as it does on Windows.
 	if (!launch->directory.empty())
 		paths.set_current(launch->directory);
+	else {
+		const auto slash = launch->image_path.find_last_of(u"\\/");
+		paths.set_current(slash == std::u16string::npos ? std::u16string(u"C:\\") : launch->image_path.substr(0, slash));
+	}
 	std::function<NativeResult(uint64_t, std::span<const uint64_t>)> call_guest;
 	NativeResources resources(process, environment, modules, entry);
 	// What a program may commit: 512 MiB by default, as set by RAVEN_COMMIT_LIMIT_MB (large programs, a browser engine for one, need more).

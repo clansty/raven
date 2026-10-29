@@ -1,6 +1,7 @@
 #include "apiset.h"
 #include "loader.h"
 #include "memory.h"
+#include "system_exports.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -48,7 +49,20 @@ void load_initial_dependencies(ModuleSet &modules,
 						const std::string_view message=error.what();
 						if (!message.starts_with("missing PE module: ")) throw;
 						const std::string identity(message.substr(19));
-						if (std::find(native_modules.begin(),native_modules.end(),identity)!=native_modules.end()) break;
+						if (std::find(native_modules.begin(),native_modules.end(),identity)!=native_modules.end()) {
+							// A library Windows answers from its own files whatever the program ships stops here, served natively. Any
+							// other one follows the search order, where the program's own folder comes first: a program replaces
+							// version.dll, winmm.dll or dinput8.dll with a proxy of its own, and the proxy does the loading that
+							// Windows would, a mod loader's injection among them.
+							if (system_library_is_known(identity)) break;
+							auto own=source(identity);
+							if (!own) break;
+							const PEImage image(*own);validate_native_image(image,identity,is_64);
+							staged.reserve(staged.size()+1);pending.reserve(pending.size()+1);
+							auto &module=modules.add(identity,std::move(*own));
+							staged.push_back(&module);pending.push_back(&module);
+							continue;
+						}
 						// An API set name stands for the system library that implements it; that library is served natively, and alias_api_sets
 						// ties the name to it once the runtime has made it.
 						if (const auto host=apiset_host(identity); !host.empty() && host!="ucrtbase.dll" &&

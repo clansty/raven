@@ -16,6 +16,10 @@ std::span<const std::pair<std::string_view, uint16_t>> system_export_ordinals(st
 uint32_t system_export_words(std::string_view dll, std::string_view name);
 // Every library with a name list, in lower case with its ".dll" suffix.
 std::span<const std::string_view> system_library_names();
+// Whether Windows answers a library from its own files whatever the program ships: the libraries an installation lists as KnownDLLs.
+// Every other system library follows the search order, whose first folder is the program's own, which is how a program replaces
+// version.dll, winmm.dll or dinput8.dll with a proxy of its own.
+bool system_library_is_known(std::string_view name);
 // The system libraries the runtime ships as guest components beside itself (in x86/ for 32-bit programs), which are loaded from there
 // whatever copies a program ships or an installer leaves in the system directory.
 inline constexpr std::string_view runtime_components[]{"msi.dll", "cabinet.dll", "sxs.dll", "rpcrt4.dll", "msxml3.dll", "libxslt.dll", "atl100.dll",

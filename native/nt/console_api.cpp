@@ -590,6 +590,9 @@ void register_console_api(ApiRegistry &registry, KernelContext &context)
 	// already has a console, and without a terminal there is no console to attach to.
 	registry.add("AttachConsole", 1, [](ApiCall &call) { call.fail(::access("/dev/tty", R_OK | W_OK) ? 6 : 5); });
 	registry.add("FreeConsole", 0, [](ApiCall &call) { call.ret(1); });
+	// A program started without a console keeps the standard handles it was given when it asks for one: the runtime has no console window to
+	// open, and what the program writes there is what it would write on the console it inherited.
+	registry.add("AllocConsole", 0, [](ApiCall &call) { call.ret(1); });
 	// The processes on the console are counted per terminal by the host, so each process lists itself.
 	registry.add("GetConsoleProcessList", 2, [](ApiCall &call) {
 		if (call.u32(1))
