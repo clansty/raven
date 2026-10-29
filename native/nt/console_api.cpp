@@ -175,11 +175,15 @@ bool open_console_device(KernelContext &context, ApiCall &call, std::u16string_v
 	const bool conin = equal_fold(device, u"CONIN$"), conout = equal_fold(device, u"CONOUT$");
 	if (!conin && !conout && !equal_fold(device, u"CON"))
 		return false;
-	const int descriptor = ::open("/dev/tty", O_RDWR | O_NOCTTY | O_CLOEXEC);
-	if (descriptor < 0)
-		return false;
 	// CON is the input when it is opened only for reading, and the screen buffer otherwise.
 	const bool input = conin || (!conout && !(access & (0x40000000U | 0x10000000U | 0x2U)));
+	int descriptor = ::open("/dev/tty", O_RDWR | O_NOCTTY | O_CLOEXEC);
+	// Without a terminal the console is the standard handle the program was started with: a program started on a pipe writes where that pipe
+	// goes, which is what a program that opens CONOUT$ for its log expects to find.
+	if (descriptor < 0)
+		descriptor = ::fcntl(input ? 0 : 1, F_DUPFD_CLOEXEC, 64);
+	if (descriptor < 0)
+		return false;
 	const auto made = context.objects.add_object(std::make_shared<FileObject>(descriptor, access, false, "/dev/tty",
 		input ? u"CONIN$" : u"CONOUT$", 0));
 	if (made.status) {
