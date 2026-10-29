@@ -2189,6 +2189,8 @@ NativeResult run_native_process(ModuleSet &modules, PEModule &entry,
 	threads.set_watched([reactor = kernel.reactor](std::vector<pollfd> &descriptors) { reactor->watch(descriptors); });
 	windows.set_global_allocator([&allocator](uint64_t size) { return allocator.allocate(size,true); });
 	kernel.queue_status=[&windows](uint32_t thread,uint32_t mask,bool clear) { return windows.queue_status(thread,mask,clear); };
+	// AllocConsole makes the window the desktop holds for a console; GetConsoleWindow answers with the one the program allocated.
+	kernel.console_window=[&windows](bool allocate) { return allocate ? windows.console_window() : windows.allocated_console_window(); };
 	windows.set_block([&threads](std::function<bool()> ready) {
 		HostWait waiting;
 		threads.block(std::move(ready), std::nullopt);

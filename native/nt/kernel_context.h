@@ -54,6 +54,9 @@ struct KernelContext {
 	std::function<void(uint64_t, bool)> reference_module;
 	// The environment variables the program has now, as the block a new process receives (set by the system handlers).
 	std::function<std::u16string()> environment_block;
+	// The window of the console a program allocates where it had none, made once, or the one it already allocated; zero when there is
+	// none, and when the desktop serves no windows.
+	std::function<uint64_t(bool)> console_window;
 	// Started operations that finish later, such as overlapped socket transfers.
 	std::shared_ptr<Reactor> reactor = std::make_shared<Reactor>();
 	// Named pipes served by this process and the pipe operations that have not finished.

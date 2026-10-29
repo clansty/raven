@@ -57,6 +57,11 @@ public:
 	// offsets in it of the capability table, the context and its state.
 	static constexpr size_t screen_caps = 0x400, screen_dc = 0x600, screen_dc_state = 0x608;
 	void set_screen_block(uint64_t *block) { screen_block = reinterpret_cast<uint8_t *>(block); }
+	// The window of the console a program allocates where it had none, made once: the runtime owns it, so its messages take the default
+	// answer, and the terminal still draws what the program writes to the console.
+	uint64_t console_window();
+	// The console window the program allocated, zero when it allocated none.
+	uint64_t allocated_console_window() const { return console && objects.window(console) ? console : 0; }
 	// A call the runtime serves with the published screen context as its first argument may change it: the guest's ReleaseDC then
 	// leaves it to the runtime. Called before every served call.
 	void screen_dc_use(std::string_view name);
@@ -444,6 +449,7 @@ private:
 	void reshape(uint64_t window,DesktopRect outer);
 	uint64_t desktop_window();
 	uint64_t desktop=0;
+	uint64_t console=0;
 	struct Modifiers { bool shift,control,alt; };
 	Modifiers modifier_state() const;
 	void parent_notify(uint64_t window,uint32_t message);
