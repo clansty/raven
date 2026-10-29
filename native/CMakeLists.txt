@@ -2744,6 +2744,17 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
                     DEPENDS ${media_source}/avrt.c ${media_source}/mfplat.c VERBATIM)
                 add_custom_target(media_component ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/avrt.dll ${CMAKE_CURRENT_BINARY_DIR}/mfplat.dll
                     ${CMAKE_CURRENT_BINARY_DIR}/x86/avrt.dll ${CMAKE_CURRENT_BINARY_DIR}/x86/mfplat.dll)
+                # raven-placeholder.dll: the image the prefix holds under the name of every library the runtime answers natively, which a
+                # program that replaces one of them with a proxy of its own looks for in the system directory.
+                set(placeholder_source ${PROJECT_SOURCE_DIR}/native/upstream/raven-placeholder)
+                add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/raven-placeholder.dll ${CMAKE_CURRENT_BINARY_DIR}/x86/raven-placeholder.dll
+                    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/x86
+                    COMMAND ${RAVEN_MINGW64} ${accprop_flags} -Wl,--entry,DllMain,--no-insert-timestamp -o ${CMAKE_CURRENT_BINARY_DIR}/raven-placeholder.dll
+                        ${placeholder_source}/placeholder.c -lkernel32
+                    COMMAND ${RAVEN_MINGW32} ${accprop_flags} -Wl,--entry,_DllMain@12,--kill-at,--no-insert-timestamp -o ${CMAKE_CURRENT_BINARY_DIR}/x86/raven-placeholder.dll
+                        ${placeholder_source}/placeholder.c -lkernel32
+                    DEPENDS ${placeholder_source}/placeholder.c VERBATIM)
+                add_custom_target(placeholder_component ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/raven-placeholder.dll ${CMAKE_CURRENT_BINARY_DIR}/x86/raven-placeholder.dll)
                 foreach(width 64 32)
                     set(d3d10_client ${CMAKE_CURRENT_BINARY_DIR}/d3d10-client${width}.exe)
                     if(width EQUAL 64)

@@ -2148,8 +2148,16 @@ NativeResult run_native_process(ModuleSet &modules, PEModule &entry,
 	const auto prefix = NativePrefix::from_environment();
 	prefix.place_runtime_components(std::filesystem::path(bootstrap).parent_path());
 	NativePaths paths(prefix);
-	if (launch && !launch->directory.empty())
-		paths.set_current(launch->directory);
+	// A program starts in its own folder unless the process that started it chose another, as a program Windows starts from its icon or a
+	// launcher does: what a program loads from beside itself, a mod loader's own files among them, it looks for from there.
+	if (launch) {
+		std::u16string folder = launch->directory;
+		if (folder.empty()) {
+			const auto slash = launch->image_path.find_last_of(u"\\/");
+			folder = slash == std::u16string::npos ? std::u16string(u"C:\\") : launch->image_path.substr(0, slash);
+		}
+		paths.set_current(folder);
+	}
 	desktop.set_section_source([&](uint64_t handle) -> std::optional<std::pair<int, uint64_t>> {
 		const auto section = kernel_objects.object_as<SectionObject>(handle);
 		if (!section || section->descriptor < 0)
@@ -2181,6 +2189,8 @@ NativeResult run_native_process(ModuleSet &modules, PEModule &entry,
 	threads.set_watched([reactor = kernel.reactor](std::vector<pollfd> &descriptors) { reactor->watch(descriptors); });
 	windows.set_global_allocator([&allocator](uint64_t size) { return allocator.allocate(size,true); });
 	kernel.queue_status=[&windows](uint32_t thread,uint32_t mask,bool clear) { return windows.queue_status(thread,mask,clear); };
+	// AllocConsole makes the window the desktop holds for a console; GetConsoleWindow answers with the one the program allocated.
+	kernel.console_window=[&windows](bool allocate) { return allocate ? windows.console_window() : windows.allocated_console_window(); };
 	windows.set_block([&threads](std::function<bool()> ready) {
 		HostWait waiting;
 		threads.block(std::move(ready), std::nullopt);

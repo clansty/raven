@@ -99,6 +99,26 @@ uint64_t NativeWindows::desktop_window()
 	return desktop;
 }
 
+uint64_t NativeWindows::console_window()
+{
+	if (console && objects.window(console))
+		return console;
+	// The class needs a non-zero procedure to register; the window itself carries none and is answered by the system, as the desktop
+	// window's is. A program that allocates a console keeps the console the terminal draws: the window is what it takes as the console's,
+	// to place it beside its own and to title it.
+	DesktopClass definition{"consolewindowclass", 0, 1};
+	const auto id = objects.register_class(std::move(definition));
+	if (!id)
+		return 0;
+	const auto &screen = objects.nonclient_metrics();
+	DesktopWindow record{id, 0, u"Console", 0, 0, screen.screen_x * 3 / 4, screen.screen_y * 3 / 4};
+	record.thread = environment.thread_id();
+	record.style = 0x00CF0000;
+	record.visible = false;
+	console = objects.add(std::move(record));
+	return console;
+}
+
 // Re-runs WM_NCCALCSIZE for the current outer rectangle and adopts the client rectangle it answers.
 void NativeWindows::recalculate_client(uint64_t handle,int32_t previous_width,int32_t previous_height,std::optional<std::pair<int32_t,int32_t>> origin)
 {

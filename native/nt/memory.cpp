@@ -396,7 +396,9 @@ std::optional<std::array<uint8_t,48>> NativeMemory::query(uint64_t address) cons
 	// measures its stack finds from any address in it.
 	const auto free_space=[&]() -> std::optional<std::array<uint8_t,48>> {
 		const uint64_t page=address&~uint64_t(4095);
-		if (page<0x10000 || page>=user_limit)
+		// The address space below the minimum application address is free too, and a program that walks the whole space from zero asks for it
+		// first: VirtualQuery(NULL) reports one free region there, as it does on Windows.
+		if (page>=user_limit)
 			return std::nullopt;
 		const auto [stack_low,stack_high]=process.stack_bounds();
 		if (page>=stack_low && page<stack_high) {

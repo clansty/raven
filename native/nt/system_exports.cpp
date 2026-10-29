@@ -127,4 +127,15 @@ std::span<const std::string_view> system_library_names()
 	return names;
 }
 
+bool system_library_is_known(std::string_view name)
+{
+	// The KnownDLLs an installation lists: the loader takes these from the system directory and never looks for them in the program's own
+	// folder, which is why a program may replace version.dll but not kernel32.dll. Every other library of Windows follows the search order.
+	static constexpr std::string_view known[]{"advapi32.dll", "clbcatq.dll", "combase.dll", "comdlg32.dll", "coml2.dll", "gdi32.dll",
+		"imagehlp.dll", "imm32.dll", "kernel32.dll", "kernelbase.dll", "msctf.dll", "msvcrt.dll", "normaliz.dll", "nsi.dll", "ntdll.dll",
+		"ole32.dll", "oleaut32.dll", "psapi.dll", "rpcrt4.dll", "sechost.dll", "setupapi.dll", "shlwapi.dll", "ucrtbase.dll", "user32.dll",
+		"wldap32.dll", "ws2_32.dll", "ws2help.dll"};
+	return std::find(std::begin(known), std::end(known), name) != std::end(known);
+}
+
 }
